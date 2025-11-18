@@ -44,6 +44,13 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/settings');
+            },
+            tooltip: 'Settings',
+          ),
+          IconButton(
             icon: Icon(
               ThemeProviderInherited.of(context).isDarkMode
                   ? Icons.light_mode

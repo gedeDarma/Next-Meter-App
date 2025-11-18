@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/customer.dart';
 import '../services/transaction_service.dart';
 import 'transaction_summary_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../models/app_settings.dart';
 
 class TransactionFormScreen extends StatefulWidget {
   final Customer customer;
@@ -156,7 +158,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Rp ${(amount ~/ 1000)}.000',
+                              TransactionService.formatRupiah(amount.toDouble()),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -172,8 +174,14 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
               ),
               const SizedBox(height: 25),
               // The duplicate Container has been removed.
-                    Container(
-                      padding: const EdgeInsets.all(15),
+                    ValueListenableBuilder<Box<AppSettings>>(
+                      valueListenable: Hive.box<AppSettings>('settings').listenable(),
+                      builder: (context, settingsBox, _) {
+                        final serviceFee = TransactionService.serviceFee.toDouble();
+                        final waterPulse = TransactionService.calculateElectricPulse(_selectedAmount.toDouble());
+                        final totalPayment = _selectedAmount.toDouble() + serviceFee;
+                        return Container(
+                          padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(8),
@@ -215,9 +223,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const Text(
-                                'Rp 3.000',
-                                style: TextStyle(
+                              Text(
+                                TransactionService.formatRupiah(TransactionService.serviceFee.toDouble()),
+                                style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.black87,
@@ -240,7 +248,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                 ),
                               ),
                               Text(
-                                TransactionService.formatRupiah((_selectedAmount + 3000).toDouble()),
+                                TransactionService.formatRupiah((_selectedAmount + TransactionService.serviceFee).toDouble()),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -255,9 +263,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Column(
+                              Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                                children: const [
                                   Text(
                                     'Water Pulse',
                                     style: TextStyle(
@@ -267,29 +275,37 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                     ),
                                   ),
                                   SizedBox(height: 4),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
                                   Text(
-                                    '(Rp 10,000 = 30 Water Pulse)',
-                                    style: TextStyle(
+                                    '(${TransactionService.pulseFormulaText()})',
+                                    style: const TextStyle(
                                       fontSize: 11,
                                       color: Colors.grey,
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${waterPulse} Pulse',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0066CC),
+                                    ),
+                                  ),
                                 ],
-                              ),
-                              Text(
-                                '$_waterPulse Pulse',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0066CC),
-                                ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                    ),
+                    );
+                  },
+                ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,

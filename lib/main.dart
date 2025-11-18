@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'models/customer.dart';
 import 'models/transaction.dart' as tx_model;
+import 'models/app_settings.dart';
 import 'screens/intro_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/settings_screen.dart';
 import 'services/data_service.dart';
 
 Future<void> main() async {
@@ -11,8 +13,18 @@ Future<void> main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(CustomerAdapter());
   Hive.registerAdapter(tx_model.TransactionAdapter());
+  Hive.registerAdapter(AppSettingsAdapter());
   await Hive.openBox<Customer>('customers');
   await Hive.openBox<tx_model.Transaction>('transactions');
+  final settingsBox = await Hive.openBox<AppSettings>('settings');
+  if (settingsBox.isEmpty) {
+    await settingsBox.put('app', AppSettings(
+      currencySymbol: 'Rp',
+      serviceFee: 3000,
+      baseAmount: 10000,
+      pulsesPerBase: 30,
+    ));
+  }
   await DataService.seedMockCustomersIfEmpty();
   runApp(const NextMeterApp());
 }
@@ -73,6 +85,7 @@ class _NextMeterAppState extends State<NextMeterApp> {
             home: const IntroScreen(),
             routes: {
               '/home': (context) => const HomeScreen(),
+              '/settings': (context) => SettingsScreen(),
             },
           ),
         );

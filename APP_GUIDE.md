@@ -6,20 +6,26 @@ A modern Flutter mobile application for managing water token transactions with a
 
 ### ✨ Core Features
 - **Intro/Splash Screen**: App welcome and onboarding
-- **Home Dashboard**: Summary cards (Transactions this month, Customers) and quick actions
+- **Home Dashboard**: Summary cards (Transactions this month, Customers), quick actions, and a Settings button
+- **Settings**:
+  - Configure currency symbol, service fee, base amount
+  - Configure pulses per base amount (pulse formula)
 - **Customer Management**:
   - Add, edit, delete customers (Hive persistence)
   - Search by name/ID/meter ID
   - Scan meter ID via camera (QR)
 - **Transaction Management**:
-  - Create transactions with amount input in Rupiah
-  - Auto-calculate water pulse based on amount
+  - Create transactions with amount input using app currency
+  - Auto-calculate water pulse using Settings formula
   - Summary confirmation and token generation
-  - Receipt page with WhatsApp sharing
+  - Receipt page with WhatsApp sharing and PDF share/print
 - **Transaction History**:
   - Grouped by date
   - Filters: Today, Last 7 days, Custom date range
   - Detail modal with WhatsApp share
+- **Backup & Restore**:
+  - Backup all boxes (customers, transactions, settings) to JSON
+  - Restore latest backup from app documents directory
 - **Dark/Light Theme**: Toggle from AppBar
 
 ### 📊 Key Functionalities
@@ -34,22 +40,25 @@ A modern Flutter mobile application for managing water token transactions with a
 
 ```
 lib/
-├── main.dart                 # Entry point with app theming
+├── main.dart                 # Entry point with app theming and routes
 ├── models/
-│   ├── customer.dart        # Customer data model
-│   └── transaction.dart     # Transaction data model
+│   ├── customer.dart        # Customer data model (Hive adapter typeId=1)
+│   ├── transaction.dart     # Transaction data model (Hive adapter typeId=2)
+│   └── app_settings.dart    # App settings model (Hive adapter typeId=3)
 ├── services/
-│   ├── data_service.dart    # Mock customer database
-│   └── transaction_service.dart  # Transaction calculations
+│   ├── data_service.dart    # Local boxes and helpers
+│   ├── transaction_service.dart  # Calculations and formatting using Settings
+│   └── backup_service.dart  # JSON backup/restore
 └── screens/
     ├── intro_screen.dart         # Welcome/Splash screen
-    ├── home_screen.dart          # Main dashboard
+    ├── home_screen.dart          # Main dashboard (with Settings button)
+    ├── settings_screen.dart      # Configure currency/fees/pulse formula
     ├── transaction_screen.dart   # Customer search
     ├── transaction_form_screen.dart      # Amount input form
     ├── transaction_summary_screen.dart   # Confirmation screen
-    ├── receipt_screen.dart       # Receipt with token
+    ├── receipt_screen.dart       # Receipt with token and PDF share
     ├── transaction_history_screen.dart   # History view
-    └── customer_list_screen.dart        # Customer list
+    └── customer_manager_screen.dart      # Customer management
 ```
 
 ## Getting Started
@@ -142,9 +151,9 @@ flutter run -v
 - Click "Continue to Transaction"
 
 #### Step 2: Amount Input
-- Enter amount in Rupiah
-- System auto-calculates electric pulse
-- Formula: Rp 10,000 = 10 Electric Pulse
+- Enter amount using the configured currency symbol
+- System auto-calculates water pulse based on Settings
+- Default formula: Rp 10,000 = 30 Pulse (customizable in Settings)
 - Click "Proceed to Summary"
 
 #### Step 3: Summary Confirmation
@@ -183,14 +192,14 @@ The app comes with 5 pre-loaded customers:
 
 ## Calculation Formula
 
-**Electric Pulse Calculation:**
-- Rp 10,000 = 10 Electric Pulse
-- Rp 50,000 = 50 Electric Pulse
-- Rp 100,000 = 100 Electric Pulse
+Pulse calculation is driven by Settings.
+- Base Amount → Pulses per Base (e.g., 10,000 → 30 Pulses by default)
+- Example: Amount ÷ BaseAmount × PulsesPerBase
 
-**Example Transaction:**
-- Customer enters: Rp 75,000
-- System calculates: 75,000 ÷ 10,000 × 10 = 75 Pulse
+Examples with defaults:
+- Rp 10,000 = 30 Pulse
+- Rp 50,000 = 150 Pulse
+- Rp 100,000 = 300 Pulse
 
 ## Technology Stack
 

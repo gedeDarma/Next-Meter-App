@@ -56,6 +56,7 @@ The app will:
 
 1. **Intro Screen** - Tap "Get Started"
 2. **Home Screen** - Choose an action:
+   - **Settings** (AppBar) - Configure currency symbol, service fee, pulse formula
    - **New Transaction** - Create a water token transaction
    - **Transaction History** - View past transactions
    - **Customers** - View customer list
@@ -63,10 +64,10 @@ The app will:
 3. **Create Transaction**:
    - Enter meter ID (e.g., 1234567890)
    - Click "Search"
-   - Enter amount in Rupiah
-   - Review summary
+   - Enter amount using configured currency
+   - Review summary (includes service fee and water pulse per Settings)
    - Confirm transaction
-   - View receipt with token
+   - View receipt with token and share PDF
 
 ---
 

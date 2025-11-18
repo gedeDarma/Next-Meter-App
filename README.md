@@ -3,18 +3,19 @@
 Water token management app built with Flutter. Features local persistence, customer management, transaction history with filters, and WhatsApp sharing.
 
 ## Features
-- Local persistence using Hive (customers and transactions)
+- Local persistence using Hive (customers, transactions, settings)
 - Auto-refresh UI via ValueListenableBuilder
-- Customers: add/edit/delete, search, QR scan for meter ID
-- Transactions: form, summary, receipt with token, share to WhatsApp
+- Settings: currency symbol, service fee, base amount, pulses per base
+- Transactions: form, summary, receipt with token; WhatsApp share; PDF receipt share/print
 - History: grouped by date, filters (Today, Last 7 days, Range), detail modal with share
-- Home: Summary cards (This Month total and count; Customers count), Recent 5 transactions
+- Home: Summary cards (This Month total and count; Customers count), Recent 5 transactions, Settings button in AppBar
+- Backup/Restore: export/import JSON to app documents directory
 - Dark/Light theme toggle
 
 ## Requirements
 - Flutter SDK 3.9.2+
 - Android SDK/API 21+
-- Dependencies: `hive`, `hive_flutter`, `mobile_scanner`, `url_launcher`
+- Dependencies: `hive`, `hive_flutter`, `mobile_scanner`, `url_launcher`, `path_provider`, `pdf`, `printing`
 
 ## Setup
 ```bash
@@ -40,11 +41,11 @@ APK output: `build/app/outputs/apk/release/`
 
 ## Notes
 - WhatsApp share uses `url_launcher` (falls back to wa.me if app not installed)
-- Hive boxes: `customers`, `transactions` (adapters in `lib/models`)
+- PDF receipts use `pdf`/`printing` and can be shared from the receipt page
+- Backup file path: `getApplicationDocumentsDirectory()/next_meter_backup.json`
+- Hive boxes: `customers`, `transactions`, `settings` (adapters in `lib/models`)
 
 ## Upcoming Features
-- Configurable pricing and pulse formula, Settings page, currency and service fee
-- PDF receipts with QR, share/print/export
 - Favorites/tags for customers; bulk import/export (CSV/JSON) with validation
 - Advanced history filters, KPIs dashboard, export reports
 - Backup/restore with encryption; schema migrations; duplicate detection
