@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/transaction.dart' as tx_model;
 import '../services/transaction_service.dart';
 import '../services/data_service.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+enum _HistoryFilter { today, last7, range }
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -13,47 +17,21 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   late List<tx_model.Transaction> _transactions;
+  _HistoryFilter _filter = _HistoryFilter.today;
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
 
   @override
   void initState() {
     super.initState();
-    _generateMockTransactions();
+    _loadTransactions();
   }
 
-  void _generateMockTransactions() {
-    final customers = DataService.getAllCustomers();
-    _transactions = [
-      tx_model.Transaction(
-        id: 'TRX1730000001',
-        customer: customers[0],
-        amount: 50000,
-        electricPulse: 50,
-        transactionDate: DateTime.now().subtract(const Duration(days: 2)),
-        status: tx_model.TransactionStatus.completed,
-        token: 'ABCD-EFGH-IJKL-MNOP-QRST',
-        receipt: 'RCPT1730000001',
-      ),
-      tx_model.Transaction(
-        id: 'TRX1730000002',
-        customer: customers[1],
-        amount: 100000,
-        electricPulse: 100,
-        transactionDate: DateTime.now().subtract(const Duration(days: 1)),
-        status: tx_model.TransactionStatus.completed,
-        token: 'UVWX-YZAB-CDEF-GHIJ-KLMN',
-        receipt: 'RCPT1730000002',
-      ),
-      tx_model.Transaction(
-        id: 'TRX1730000003',
-        customer: customers[2],
-        amount: 75000,
-        electricPulse: 75,
-        transactionDate: DateTime.now(),
-        status: tx_model.TransactionStatus.completed,
-        token: 'OPQR-STUV-WXYZ-ABCD-EFGH',
-        receipt: 'RCPT1730000003',
-      ),
-    ];
+  void _loadTransactions() {
+    final list = DataService.getAllTransactions();
+    setState(() {
+      _transactions = list;
+    });
   }
 
   void _showTransactionDetail(tx_model.Transaction transaction) {
@@ -129,6 +107,28 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
             ),
+            TextButton.icon(
+              icon: const Icon(Icons.share),
+              label: const Text('Share to WhatsApp'),
+              onPressed: () async {
+                final msg = 'Next Meter - Transaction\n'
+                    'ID: ${transaction.id}\n'
+                    'Customer: ${transaction.customer.name}\n'
+                    'Meter ID: ${transaction.customer.meterId}\n'
+                    'Amount: ${TransactionService.formatRupiah(transaction.amount)}\n'
+                    'Water Pulse: ${transaction.electricPulse}\n'
+                    'Date: ${TransactionService.formatDateTime(transaction.transactionDate)}\n'
+                    'Token: ${transaction.token ?? '-'}';
+                final encoded = Uri.encodeComponent(msg);
+                final whatsappUri = Uri.parse('whatsapp://send?text=$encoded');
+                if (await canLaunchUrl(whatsappUri)) {
+                  await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+                } else {
+                  final webUri = Uri.parse('https://wa.me/?text=$encoded');
+                  await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
           ],
         );
       },
@@ -138,180 +138,213 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _transactions.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.history,
-                    size: 80,
-                    color: Colors.grey.shade300,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No transactions yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
+      appBar: AppBar(
+        title: const Text('Transaction History'),
+        leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Today'),
+                  selected: _filter == _HistoryFilter.today,
+                  onSelected: (v) {
+                    if (v) setState(() => _filter = _HistoryFilter.today);
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('Last 7 days'),
+                  selected: _filter == _HistoryFilter.last7,
+                  onSelected: (v) {
+                    if (v) setState(() => _filter = _HistoryFilter.last7);
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('Range'),
+                  selected: _filter == _HistoryFilter.range,
+                  onSelected: (v) async {
+                    if (!v) return;
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      initialDateRange: (_rangeStart != null && _rangeEnd != null)
+                          ? DateTimeRange(start: _rangeStart!, end: _rangeEnd!)
+                          : null,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _rangeStart = DateTime(picked.start.year, picked.start.month, picked.start.day);
+                        _rangeEnd = DateTime(picked.end.year, picked.end.month, picked.end.day);
+                        _filter = _HistoryFilter.range;
+                      });
+                    } else {
+                      setState(() => _filter = _HistoryFilter.range);
+                    }
+                  },
+                ),
+                if (_filter == _HistoryFilter.range && _rangeStart != null && _rangeEnd != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      '${_rangeStart!.day}/${_rangeStart!.month}/${_rangeStart!.year} - ${_rangeEnd!.day}/${_rangeEnd!.month}/${_rangeEnd!.year}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF0066CC), fontWeight: FontWeight.w600),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your transaction history will appear here',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
+              ],
+            ),
+          ),
+          Expanded(
+            child: ValueListenableBuilder<Box<tx_model.Transaction>>(
+              valueListenable: Hive.box<tx_model.Transaction>('transactions').listenable(),
+              builder: (context, box, _) {
+                final all = DataService.getAllTransactions();
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+
+                List<tx_model.Transaction> list = all.where((t) {
+                  final d = DateTime(t.transactionDate.year, t.transactionDate.month, t.transactionDate.day);
+                  switch (_filter) {
+                    case _HistoryFilter.today:
+                      return d == today;
+                    case _HistoryFilter.last7:
+                      final start = today.subtract(const Duration(days: 6));
+                      return d.compareTo(start) >= 0 && d.compareTo(today) <= 0;
+                    case _HistoryFilter.range:
+                      if (_rangeStart == null || _rangeEnd == null) return true;
+                      return d.compareTo(_rangeStart!) >= 0 && d.compareTo(_rangeEnd!) <= 0;
+                  }
+                }).toList();
+
+                if (list.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.history, size: 80, color: Colors.grey.shade300),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No transactions found',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Try a different filter',
+                          style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: _transactions.length,
-              itemBuilder: (context, index) {
-                final transaction = _transactions[index];
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: InkWell(
-                    onTap: () => _showTransactionDetail(transaction),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                }
+
+                final Map<DateTime, List<tx_model.Transaction>> groups = {};
+                for (final t in list) {
+                  final d = DateTime(t.transactionDate.year, t.transactionDate.month, t.transactionDate.day);
+                  groups.putIfAbsent(d, () => []).add(t);
+                }
+                final dates = groups.keys.toList()..sort((a, b) => b.compareTo(a));
+
+                return ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    for (final d in dates) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          '${d.day}/${d.month}/${d.year}',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+                        ),
+                      ),
+                      for (final transaction in groups[d]!) Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        child: InkWell(
+                          onTap: () => _showTransactionDetail(transaction),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      transaction.customer.name,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            transaction.customer.name,
+                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text('ID: ${transaction.customer.meterId}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                                        ],
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'ID: ${transaction.customer.meterId}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(20)),
+                                      child: Text('Completed', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
                                     ),
                                   ],
                                 ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
+                                const SizedBox(height: 12),
+                                const Divider(height: 1),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Amount', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          TransactionService.formatRupiah(transaction.amount),
+                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+                                        ),
+                                      ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text('Water Pulse', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                        const SizedBox(height: 4),
+                                        Text('${transaction.electricPulse} Water Pulse', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC))),
+                                      ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text('Date', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                        const SizedBox(height: 4),
+                                        Text('${transaction.transactionDate.day}/${transaction.transactionDate.month}/${transaction.transactionDate.year}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade100,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'Completed',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          const Divider(height: 1),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Amount',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    TransactionService.formatRupiah(
-                                      transaction.amount,
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0066CC),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Water Pulse',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${transaction.electricPulse} Water Pulse',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0066CC),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Date',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${transaction.transactionDate.day}/${transaction.transactionDate.month}/${transaction.transactionDate.year}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    ],
+                  ],
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 

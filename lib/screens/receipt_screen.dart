@@ -3,6 +3,7 @@ import '../models/transaction.dart' as tx_model;
 import '../services/transaction_service.dart';
 import '../services/data_service.dart';
 import 'home_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReceiptScreen extends StatefulWidget {
   final tx_model.Transaction transaction;
@@ -296,14 +297,25 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () {
-                    // Share receipt
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Receipt shared (simulated)'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                  onPressed: () async {
+                    final t = widget.transaction;
+                    final msg = 'Next Meter - Receipt\n'
+                        'Transaction ID: ${t.id}\n'
+                        'Receipt No: ${t.receipt ?? '-'}\n'
+                        'Date & Time: ${TransactionService.formatDateTime(t.transactionDate)}\n'
+                        'Customer: ${t.customer.name}\n'
+                        'Meter ID: ${t.customer.meterId}\n'
+                        'Amount: ${TransactionService.formatRupiah(t.amount)}\n'
+                        'Water Pulse: ${t.electricPulse}\n'
+                        'Token: ${t.token ?? '-'}';
+                    final encoded = Uri.encodeComponent(msg);
+                    final whatsappUri = Uri.parse('whatsapp://send?text=$encoded');
+                    if (await canLaunchUrl(whatsappUri)) {
+                      await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+                    } else {
+                      final webUri = Uri.parse('https://wa.me/?text=$encoded');
+                      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+                    }
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0066CC),

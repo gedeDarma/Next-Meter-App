@@ -1,3 +1,4 @@
+import 'package:hive/hive.dart';
 import 'customer.dart';
 
 enum TransactionStatus { pending, confirmed, completed }
@@ -49,5 +50,44 @@ class Transaction {
       'token': token,
       'receipt': receipt,
     };
+  }
+}
+
+class TransactionAdapter extends TypeAdapter<Transaction> {
+  @override
+  final int typeId = 2;
+
+  @override
+  Transaction read(BinaryReader reader) {
+    final id = reader.read() as String;
+    final customer = reader.read() as Customer;
+    final amount = (reader.read() as num).toDouble();
+    final electricPulse = reader.read() as int;
+    final millis = reader.read() as int;
+    final statusIndex = reader.read() as int;
+    final token = reader.read() as String?;
+    final receipt = reader.read() as String?;
+    return Transaction(
+      id: id,
+      customer: customer,
+      amount: amount,
+      electricPulse: electricPulse,
+      transactionDate: DateTime.fromMillisecondsSinceEpoch(millis),
+      status: TransactionStatus.values[statusIndex],
+      token: token,
+      receipt: receipt,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, Transaction obj) {
+    writer.write(obj.id);
+    writer.write(obj.customer);
+    writer.write(obj.amount);
+    writer.write(obj.electricPulse);
+    writer.write(obj.transactionDate.millisecondsSinceEpoch);
+    writer.write(obj.status.index);
+    writer.write(obj.token);
+    writer.write(obj.receipt);
   }
 }

@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/customer.dart';
+import 'models/transaction.dart' as tx_model;
 import 'screens/intro_screen.dart';
 import 'screens/home_screen.dart';
+import 'services/data_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  Hive.registerAdapter(CustomerAdapter());
+  Hive.registerAdapter(tx_model.TransactionAdapter());
+  await Hive.openBox<Customer>('customers');
+  await Hive.openBox<tx_model.Transaction>('transactions');
+  await DataService.seedMockCustomersIfEmpty();
   runApp(const NextMeterApp());
 }
 

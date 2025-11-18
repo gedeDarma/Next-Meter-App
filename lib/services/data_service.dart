@@ -1,7 +1,10 @@
+import 'package:hive/hive.dart';
 import '../models/customer.dart';
 import '../models/transaction.dart' as tx_model;
 
 class DataService {
+  static Box<Customer> _customersBox() => Hive.box<Customer>('customers');
+  static Box<tx_model.Transaction> _transactionsBox() => Hive.box<tx_model.Transaction>('transactions');
   static final List<Customer> mockCustomers = [
     Customer(
       id: 'CUST001',
@@ -45,45 +48,70 @@ class DataService {
     ),
   ];
 
-  // Store for completed transactions (recent activity)
-  static final List<tx_model.Transaction> _recentTransactions = [];
-
-  // Add a transaction to recent activity
-  static void addRecentTransaction(tx_model.Transaction transaction) {
-    _recentTransactions.insert(0, transaction);
-    // Keep only the last 10 transactions
-    if (_recentTransactions.length > 10) {
-      _recentTransactions.removeAt(_recentTransactions.length - 1);
+  static Future<void> seedMockCustomersIfEmpty() async {
+    final box = _customersBox();
+    if (box.isEmpty) {
+      for (final c in mockCustomers) {
+        await box.put(c.id, c);
+      }
     }
   }
 
-  // Get recent transactions
-  static List<tx_model.Transaction> getRecentTransactions() {
-    return _recentTransactions;
+  static void addRecentTransaction(tx_model.Transaction transaction) {
+    _transactionsBox().put(transaction.id, transaction);
   }
 
-  // Search customer by meter ID
+  static List<tx_model.Transaction> getRecentTransactions() {
+    final list = _transactionsBox().values.toList();
+    list.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+    return list.take(10).toList();
+  }
+
+  static List<tx_model.Transaction> getAllTransactions() {
+    final list = _transactionsBox().values.toList();
+    list.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+    return list;
+  }
+
   static Customer? searchCustomerByMeterId(String meterId) {
     try {
-      return mockCustomers.firstWhere(
-        (customer) => customer.meterId == meterId,
-      );
-    } catch (e) {
+      return _customersBox().values.firstWhere((customer) => customer.meterId == meterId);
+    } catch (_) {
       return null;
     }
   }
 
-  // Search customer by ID
   static Customer? searchCustomerById(String id) {
-    try {
-      return mockCustomers.firstWhere((customer) => customer.id == id);
-    } catch (e) {
-      return null;
-    }
+    return _customersBox().get(id);
   }
 
-  // Get all customers
   static List<Customer> getAllCustomers() {
-    return mockCustomers;
+    return _customersBox().values.toList();
+  }
+
+  static Future<void> createCustomer(Customer customer) async {
+    await _customersBox().put(customer.id, customer);
+  }
+
+  static Future<void> updateCustomer(Customer customer) async {
+    await _customersBox().put(customer.id, customer);
+  }
+
+  static Future<bool> deleteCustomer(String id) async {
+    if (!_customersBox().containsKey(id)) return false;
+    await _customersBox().delete(id);
+    return true;
+  }
+
+  static Future<void> clearCustomers() async {
+    await _customersBox().clear();
+  }
+
+  static bool existsById(String id) {
+    return _customersBox().containsKey(id);
+  }
+
+  static bool existsByMeterId(String meterId) {
+    return _customersBox().values.any((c) => c.meterId == meterId);
   }
 }
