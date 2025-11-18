@@ -5,18 +5,22 @@ A modern Flutter mobile application for managing water token transactions with a
 ## Features
 
 ### ✨ Core Features
-- **Intro/Splash Screen**: Beautiful welcome screen with app branding
-- **Home Dashboard**: Quick access to main features and system information
-- **Customer Search**: Search customers by meter ID with real-time validation
+- **Intro/Splash Screen**: App welcome and onboarding
+- **Home Dashboard**: Summary cards (Transactions this month, Customers) and quick actions
+- **Customer Management**:
+  - Add, edit, delete customers (Hive persistence)
+  - Search by name/ID/meter ID
+  - Scan meter ID via camera (QR)
 - **Transaction Management**:
-  - Create new transactions
-  - Input amount in Rupiah
-  - Auto-calculate electric pulses (Rp 10,000 = 10 Pulse)
-  - Review transaction summary before confirmation
-  - Generate unique electricity tokens
-- **Transaction History**: View all past transactions with details
-- **Customer Management**: Browse and search all customers in the system
-- **Digital Receipts**: Automatic receipt generation with electricity tokens
+  - Create transactions with amount input in Rupiah
+  - Auto-calculate water pulse based on amount
+  - Summary confirmation and token generation
+  - Receipt page with WhatsApp sharing
+- **Transaction History**:
+  - Grouped by date
+  - Filters: Today, Last 7 days, Custom date range
+  - Detail modal with WhatsApp share
+- **Dark/Light Theme**: Toggle from AppBar
 
 ### 📊 Key Functionalities
 1. **Customer Search**: Find customers by meter ID and view their details
@@ -193,8 +197,10 @@ The app comes with 5 pre-loaded customers:
 - **Framework**: Flutter
 - **Language**: Dart
 - **UI**: Material Design 3
-- **State Management**: StatefulWidget
-- **Storage**: Mock in-memory database (can be replaced with actual database)
+- **State Management**: StatefulWidget + ValueListenableBuilder
+- **Storage**: Hive (local persistence) via `hive` and `hive_flutter`
+- **Device**: Camera scanning via `mobile_scanner`
+- **Share**: WhatsApp share via `url_launcher`
 
 ## UI/UX Highlights
 

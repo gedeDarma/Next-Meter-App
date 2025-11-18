@@ -130,6 +130,18 @@ adb logcat
 flutter run --release
 ```
 
+### Build Signed Release APK
+```bash
+flutter build apk --release
+# or smaller per-ABI APKs
+flutter build apk --release --split-per-abi
+```
+
+Install to device:
+```bash
+adb install -r build\app\outputs\apk\release\app-release.apk
+```
+
 ### Run with Verbose Output (Debugging)
 ```bash
 flutter run -v
@@ -170,10 +182,11 @@ Use these meter IDs to test the app:
 
 - ✅ App launches without errors
 - ✅ Intro screen displays "Next Meter"
-- ✅ Can navigate between screens
-- ✅ Can search for customers
-- ✅ Can create transactions
-- ✅ Receipt shows unique token
+- ✅ Home shows Summary and Quick Actions
+- ✅ Transaction History groups by date and filters work
+- ✅ Customers list updates on add/edit/delete
+- ✅ Can create transactions and see receipt
+- ✅ Share to WhatsApp works from receipt and history detail
 
 ---
 
