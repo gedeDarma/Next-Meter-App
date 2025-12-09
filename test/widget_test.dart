@@ -15,7 +15,7 @@ void main() {
     await tester.pumpWidget(const NextMeterApp());
 
     // Verify that the app launches with intro screen
-    expect(find.text('Next Meter'), findsOneWidget);
+    expect(find.text('next_meter'), findsOneWidget);
     expect(find.text('Get Started'), findsOneWidget);
   });
 }

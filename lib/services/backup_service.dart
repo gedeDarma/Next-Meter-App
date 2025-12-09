@@ -1,4 +1,3 @@
-// c:\Users\ThinkPad\Documents\Flutter Project\next_meter\lib\services\backup_service.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -27,14 +26,14 @@ class BackupService {
     };
 
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/next_meter_backup.json');
+    final file = File('${dir.path}/NexMeter_backup.json');
     await file.writeAsString(jsonEncode(payload));
     return file.path;
   }
 
   static Future<void> restoreLatest() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/next_meter_backup.json');
+    final file = File('${dir.path}/NexMeter_backup.json');
     if (!await file.exists()) return;
 
     final text = await file.readAsString();

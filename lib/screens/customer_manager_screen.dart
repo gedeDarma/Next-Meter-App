@@ -1,5 +1,6 @@
 // lib/screens/customer_manager_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/customer.dart';
@@ -118,10 +119,8 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                       child: ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0066CC),
-                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         child: const Text('Close'),
                       ),
@@ -140,7 +139,7 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC))),
+        Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
         const SizedBox(height: 10),
         ...items.map((item) {
           return Padding(
@@ -162,19 +161,8 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Customers'),
-        leading: BackButton(onPressed: () => Navigator.of(context).pop()),
-        elevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openCustomerForm(),
-        tooltip: 'Add Customer',
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
+    return Column(
+      children: [
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -201,10 +189,26 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                 ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8)), borderSide: BorderSide(color: Color(0xFF0066CC), width: 2)),
+                focusedBorder: OutlineInputBorder(borderRadius: const BorderRadius.all(Radius.circular(8)), borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)),
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _openCustomerForm(),
+                icon: const Icon(Icons.person_add),
+                label: const Text('Add Customer'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: Hive.box<Customer>('customers').listenable(),
@@ -247,7 +251,7 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                               Container(
                                 width: 50,
                                 height: 50,
-                                decoration: BoxDecoration(color: const Color(0xFF0066CC), borderRadius: BorderRadius.circular(8)),
+                                decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(10)),
                                 child: const Center(child: Icon(Icons.person, color: Colors.white, size: 24)),
                               ),
                               const SizedBox(width: 12),
@@ -275,8 +279,7 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   void _openCustomerForm({Customer? existing}) {
@@ -301,7 +304,7 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(existing == null ? 'Add Customer' : 'Edit Customer', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0066CC))),
+                  Text(existing == null ? 'Add Customer' : 'Edit Customer', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: idController,
@@ -320,10 +323,14 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                     controller: meterController,
                     decoration: const InputDecoration(labelText: 'Meter ID', prefixIcon: Icon(Icons.qr_code)),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(8),
+                    ],
                     validator: (v) {
                       final s = v?.trim() ?? '';
                       if (s.isEmpty) return 'Meter ID is required';
-                      if (!RegExp(r'^\d{6,20}$').hasMatch(s)) return 'Meter ID must be 6-20 digits';
+                      if (!RegExp(r'^\d{8}$').hasMatch(s)) return 'Meter ID must be exactly 8 digits';
                       return null;
                     },
                   ),
@@ -405,16 +412,16 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                             );
                             await DataService.updateCustomer(customer);
                           }
+                          if (!mounted) return;
                           Navigator.of(ctx).pop();
                         } catch (e) {
+                          if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to save customer')));
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0066CC),
-                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       child: const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
@@ -446,6 +453,7 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
               onPressed: () async {
                 await DataService.deleteCustomer(customer.id);
                 Navigator.of(dCtx).pop();
+                if (!mounted) return;
                 Navigator.of(context).pop();
               },
               child: const Text('Delete'),

@@ -19,13 +19,13 @@ class IntroScreen extends StatelessWidget {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0066CC),
-              Color(0xFF004499),
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primaryContainer,
             ],
           ),
         ),
@@ -38,25 +38,25 @@ class IntroScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
                   ],
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 60,
                   backgroundColor: Colors.white,
                   child: Icon(
                     Icons.water_drop,
                     size: 80,
-                    color: Color(0xFF0066CC),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
               const SizedBox(height: 30),
               const Text(
-                'Next Meter',
+                'NexMeter',
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
@@ -77,8 +77,6 @@ class IntroScreen extends StatelessWidget {
                   Navigator.of(context).pushReplacementNamed('/home');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF0066CC),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 50,
                     vertical: 15,
@@ -86,7 +84,6 @@ class IntroScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(25),
                   ),
-                  elevation: 5,
                 ),
                 child: const Text(
                   'Get Started',

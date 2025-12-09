@@ -1,5 +1,5 @@
-// c:\Users\ThinkPad\Documents\Flutter Project\next_meter\lib\screens\settings_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 
 import '../models/app_settings.dart';
@@ -16,12 +16,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _serviceFeeCtrl;
   late final TextEditingController _baseAmountCtrl;
   late final TextEditingController _pulsesPerBaseCtrl;
+  late final TextEditingController _keygenCtrl;
+  late final TextEditingController _permutationCtrl;
 
   AppSettings _settings = AppSettings(
     currencySymbol: 'Rp',
     serviceFee: 3000,
     baseAmount: 10000,
     pulsesPerBase: 30,
+    keygen: 0,
+    permutation: '0-1-2-3-4-5-6-7-8-9-10-11-12-13',
   );
 
   @override
@@ -38,6 +42,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _serviceFeeCtrl = TextEditingController(text: _settings.serviceFee.toString());
     _baseAmountCtrl = TextEditingController(text: _settings.baseAmount.toString());
     _pulsesPerBaseCtrl = TextEditingController(text: _settings.pulsesPerBase.toString());
+    _keygenCtrl = TextEditingController(text: _settings.keygen.toString());
+    _permutationCtrl = TextEditingController(text: _settings.permutation);
   }
 
   @override
@@ -46,6 +52,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _serviceFeeCtrl.dispose();
     _baseAmountCtrl.dispose();
     _pulsesPerBaseCtrl.dispose();
+    _keygenCtrl.dispose();
+    _permutationCtrl.dispose();
     super.dispose();
   }
 
@@ -54,6 +62,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final serviceFee = int.tryParse(_serviceFeeCtrl.text.trim()) ?? 0;
     final baseAmount = int.tryParse(_baseAmountCtrl.text.trim()) ?? 0;
     final pulsesPerBase = int.tryParse(_pulsesPerBaseCtrl.text.trim()) ?? 0;
+    final keygen = int.tryParse(_keygenCtrl.text.trim()) ?? 0;
+    final permText = _permutationCtrl.text.trim();
+    final parts = permText.split(RegExp(r'[-,\s]+')).where((e) => e.isNotEmpty).toList();
+    final nums = parts.map((p) => int.tryParse(p) ?? -1).toList();
+    final isValid = nums.length == 14 && nums.toSet().length == 14 && nums.every((n) => n >= 0 && n <= 13);
+    if (!isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid permutation. Enter 14 unique numbers 0-13 separated by -')));
+      return;
+    }
+    final permutation = nums.join('-');
 
     final box = Hive.box<AppSettings>('settings');
     final updated = AppSettings(
@@ -61,6 +79,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       serviceFee: serviceFee,
       baseAmount: baseAmount,
       pulsesPerBase: pulsesPerBase,
+      keygen: keygen,
+      permutation: permutation,
     );
     await box.put('app', updated);
     setState(() {
@@ -88,6 +108,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _serviceFeeCtrl.text = updated.serviceFee.toString();
       _baseAmountCtrl.text = updated.baseAmount.toString();
       _pulsesPerBaseCtrl.text = updated.pulsesPerBase.toString();
+      _keygenCtrl.text = updated.keygen.toString();
+      _permutationCtrl.text = updated.permutation;
     });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restore complete')));
@@ -110,7 +132,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
             _buildTextField('Base Amount', _baseAmountCtrl, keyboardType: TextInputType.number, prefix: const Icon(Icons.attach_money)),
             const SizedBox(height: 12),
-            _buildTextField('Pulses per Base', _pulsesPerBaseCtrl, keyboardType: TextInputType.number, prefix: const Icon(Icons.water)),
+            _buildTextField('m³ per Base', _pulsesPerBaseCtrl, keyboardType: TextInputType.number, prefix: const Icon(Icons.water)),
+            const SizedBox(height: 12),
+            _buildTextField('Keygen', _keygenCtrl, keyboardType: TextInputType.number, prefix: const Icon(Icons.key), enabled: false, inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(7),
+            ]),
+            const SizedBox(height: 12),
+            _buildTextField('Permutation (0-13, 14 unique, use -)', _permutationCtrl, keyboardType: TextInputType.text, prefix: const Icon(Icons.shuffle), enabled: false, inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9\-]')),
+            ]),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -158,10 +189,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     TextEditingController controller, {
     TextInputType? keyboardType,
     Widget? prefix,
+    List<TextInputFormatter>? inputFormatters,
+    bool enabled = true,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: prefix,

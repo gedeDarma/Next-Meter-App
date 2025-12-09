@@ -77,12 +77,14 @@ class TransactionService {
       serviceFee: 3000,
       baseAmount: 10000,
       pulsesPerBase: 30,
+      keygen: 0,
+      permutation: '0-1-2-3-4-5-6-7-8-9-10-11-12-13',
     );
   }
 
   static String pulseFormulaText() {
     final s = _getSettings();
     final baseStr = formatRupiahValue(s.baseAmount.toDouble());
-    return '${s.currencySymbol} $baseStr = ${s.pulsesPerBase} Water Pulse';
+    return '${s.currencySymbol} $baseStr = ${s.pulsesPerBase} m³';
   }
 }

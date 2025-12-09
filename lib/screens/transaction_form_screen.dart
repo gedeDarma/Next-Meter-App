@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/customer.dart';
 import '../services/transaction_service.dart';
+import '../services/data_service.dart';
 import 'transaction_summary_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/app_settings.dart';
@@ -22,12 +24,15 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   final List<int> _presetAmounts = [20000, 50000, 100000, 200000];
   // service fee is a fixed value (Rp 3,000) taken from TransactionService
   late int _selectedAmount;
+  final TextEditingController _counterCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _selectedAmount = _presetAmounts[0];
     _waterPulse = TransactionService.calculateElectricPulse(_selectedAmount.toDouble());
+    final nextCount = DataService.getTransactionCountByMeterId(widget.customer.meterId) + 1;
+    _counterCtrl.text = nextCount.clamp(0, 999).toString().padLeft(3, '0');
   }
 
   void _selectAmount(int amount) {
@@ -58,6 +63,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
           waterPulse: _waterPulse,
           serviceFee: serviceFee,
           totalPayment: totalPayment,
+          counter: int.tryParse(_counterCtrl.text.trim()) ?? 0,
         ),
       ),
     );
@@ -76,12 +82,12 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Transaction Details',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0066CC),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 20),
@@ -95,12 +101,12 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Customer Information',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0066CC),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -140,16 +146,19 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: isSelected
-                            ? const LinearGradient(
+                            ? LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [Color(0xFF0066CC), Color(0xFF0052A3)],
+                                colors: [
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context).colorScheme.primaryContainer,
+                                ],
                               )
                             : null,
                         color: isSelected ? null : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF0066CC) : Colors.grey.shade300,
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
                           width: isSelected ? 2 : 1,
                         ),
                       ),
@@ -162,7 +171,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.white : const Color(0xFF0066CC),
+                                color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],
@@ -173,19 +182,39 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                 },
               ),
               const SizedBox(height: 25),
+              const Text(
+                'Counter',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _counterCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(3),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Counter',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
               // The duplicate Container has been removed.
                     ValueListenableBuilder<Box<AppSettings>>(
                       valueListenable: Hive.box<AppSettings>('settings').listenable(),
                       builder: (context, settingsBox, _) {
                         final serviceFee = TransactionService.serviceFee.toDouble();
                         final waterPulse = TransactionService.calculateElectricPulse(_selectedAmount.toDouble());
-                        final totalPayment = _selectedAmount.toDouble() + serviceFee;
                         return Container(
                           padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,31 +263,31 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          const Divider(height: 1, color: Colors.blue),
+                          Divider(height: 1, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
+                              Text(
                                 'Total Payment',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0066CC),
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                               Text(
                                 TransactionService.formatRupiah((_selectedAmount + TransactionService.serviceFee).toDouble()),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0066CC),
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          const Divider(height: 1, color: Colors.blue),
+                          Divider(height: 1, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
                           const SizedBox(height: 12),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -267,7 +296,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: const [
                                   Text(
-                                    'Water Pulse',
+                                    'Volume (m³)',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.grey,
@@ -290,11 +319,11 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${waterPulse} Pulse',
-                                    style: const TextStyle(
+                                    '$waterPulse m³',
+                                    style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0066CC),
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                 ],
@@ -312,11 +341,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                 child: ElevatedButton(
                   onPressed: _proceedToSummary,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066CC),
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text(
@@ -334,11 +361,9 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0066CC),
                     padding: const EdgeInsets.symmetric(vertical: 15),
-                    side: const BorderSide(color: Color(0xFF0066CC)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text(
@@ -387,6 +412,7 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
   @override
   void dispose() {
+    _counterCtrl.dispose();
     super.dispose();
   }
 }

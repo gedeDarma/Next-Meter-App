@@ -4,22 +4,105 @@ import '../services/transaction_service.dart';
 import '../services/data_service.dart';
 import 'home_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:hive/hive.dart';
+import '../models/app_settings.dart';
 
 class ReceiptScreen extends StatefulWidget {
   final tx_model.Transaction transaction;
+  final int counter;
 
-  const ReceiptScreen({super.key, required this.transaction});
+  const ReceiptScreen({super.key, required this.transaction, required this.counter});
 
   @override
   State<ReceiptScreen> createState() => _ReceiptScreenState();
 }
 
 class _ReceiptScreenState extends State<ReceiptScreen> {
+  late final String _encryption;
+  late final String _permutation;
+  String _buildPlan() {
+    final meter = widget.transaction.customer.meterId.replaceAll(RegExp(r'\D'), '').padLeft(8, '0').substring(0, 8);
+    final vol = widget.transaction.electricPulse.clamp(0, 999).toString().padLeft(3, '0');
+    final ctr = widget.counter.clamp(0, 999).toString().padLeft(3, '0');
+    return '$meter$vol$ctr';
+  }
+
+  String _buildKeygen() {
+    final box = Hive.box<AppSettings>('settings');
+    final settings = box.get('app');
+    final keygenValue = (settings?.keygen ?? 0).toString().padLeft(7, '0');
+    return keygenValue + keygenValue;
+  }
+
+  String _buildEncryption() {
+    final plan = _buildPlan();
+    final keygen = _buildKeygen();
+    final buf = StringBuffer();
+    for (int i = 0; i < 14; i++) {
+      final p = int.parse(plan[i]);
+      final k = int.parse(keygen[i]);
+      buf.write((p + k) % 10);
+    }
+    return buf.toString();
+  }
+
+  String _getSettingsPermutation() {
+    final box = Hive.box<AppSettings>('settings');
+    final settings = box.get('app');
+    final p = settings?.permutation ?? '0-1-2-3-4-5-6-7-8-9-10-11-12-13';
+    final parts = p.split('-');
+    final nums = parts.map((e) => int.tryParse(e) ?? -1).toList();
+    final valid = nums.length == 14 && nums.toSet().length == 14 && nums.every((n) => n >= 0 && n <= 13);
+    if (!valid) {
+      final vals = List<int>.generate(14, (i) => i);
+      return vals.join('-');
+    }
+    return nums.join('-');
+  }
+
+  String _buildEncryptedToken() {
+    final enc = _encryption;
+    final parts = _permutation.split('-');
+    final indices = parts.map((p) => int.tryParse(p) ?? 0).toList();
+    final buf = StringBuffer();
+    int x = 0;
+    for (int i = 0; i < 14; i++) {
+      final idx = indices[i];
+      final ch = enc[idx];
+      final d = int.parse(ch);
+      x ^= d;
+      buf.write(ch);
+    }
+    buf.write((x ~/ 10).toString());
+    buf.write((x % 10).toString());
+    return buf.toString();
+  }
+
+  String _formatTokenBlocks(String t) {
+    final b = StringBuffer();
+    for (int i = 0; i < t.length; i++) {
+      if (i > 0 && i % 4 == 0) b.write('-');
+      b.write(t[i]);
+    }
+    return b.toString();
+  }
   @override
   void initState() {
     super.initState();
-    // Save transaction to recent activity
-    DataService.addRecentTransaction(widget.transaction);
+    _encryption = _buildEncryption();
+    _permutation = _getSettingsPermutation();
+    final token = _formatTokenBlocks(_buildEncryptedToken());
+    final saved = tx_model.Transaction(
+      id: widget.transaction.id,
+      customer: widget.transaction.customer,
+      amount: widget.transaction.amount,
+      electricPulse: widget.transaction.electricPulse,
+      transactionDate: widget.transaction.transactionDate,
+      status: widget.transaction.status,
+      token: token,
+      receipt: widget.transaction.receipt,
+    );
+    DataService.addRecentTransaction(saved);
   }
 
   @override
@@ -84,12 +167,12 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Transaction Information',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0066CC),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 15),
@@ -109,12 +192,12 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                       const SizedBox(height: 20),
                       const Divider(height: 1),
                       const SizedBox(height: 20),
-                      const Text(
+                      Text(
                         'Customer Information',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0066CC),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 15),
@@ -140,12 +223,12 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                       const SizedBox(height: 20),
                       const Divider(height: 1),
                       const SizedBox(height: 20),
-                      const Text(
+                      Text(
                         'Transaction Amount',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0066CC),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 15),
@@ -160,7 +243,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Water Pulse',
+                            'Volume (m³)',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
@@ -168,11 +251,11 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                             ),
                           ),
                           Text(
-                            '${widget.transaction.electricPulse} Water Pulse',
-                            style: const TextStyle(
+                            '${widget.transaction.electricPulse} m³',
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0066CC),
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],
@@ -181,28 +264,63 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                   ),
                 ),
               ),
+              // Token Parameters section hidden - uncomment if needed for debugging
+              // Card(
+              //   elevation: 3,
+              //   shape: RoundedRectangleBorder(
+              //     borderRadius: BorderRadius.circular(12),
+              //   ),
+              //   child: Padding(
+              //     padding: const EdgeInsets.all(20),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         Text(
+              //           'Token Parameters',
+              //           style: TextStyle(
+              //             fontSize: 14,
+              //             fontWeight: FontWeight.bold,
+              //             color: Theme.of(context).colorScheme.primary,
+              //           ),
+              //         ),
+              //         const SizedBox(height: 15),
+              //         _buildReceiptRow('Plan', _buildPlan()),
+              //         const SizedBox(height: 10),
+              //         _buildReceiptRow('Key', _buildKey()),
+              //         const SizedBox(height: 10),
+              //         _buildReceiptRow('Keygen', _buildKeygen()),
+              //         const SizedBox(height: 10),
+              //         _buildReceiptRow('Encryption', _encryption),
+              //         const SizedBox(height: 10),
+              //         _buildReceiptRow('Permutation', _permutation),
+              //         const SizedBox(height: 10),
+              //         _buildReceiptRow('Encrypted Token', _buildEncryptedToken()),
+              //       ],
+              //     ),
+              //   ),
+              // ),
               const SizedBox(height: 25),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200, width: 2),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25), width: 2),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.vpn_key, color: Color(0xFF0066CC), size: 24),
-                        SizedBox(width: 10),
+                        Icon(Icons.vpn_key, color: Theme.of(context).colorScheme.primary, size: 24),
+                        const SizedBox(width: 10),
                         Text(
                           'Water Token',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0066CC),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],
@@ -214,17 +332,17 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade300),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35)),
                       ),
                       child: Column(
                         children: [
                           Text(
-                            widget.transaction.token ?? '-',
+                            _formatTokenBlocks(_buildEncryptedToken()),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0066CC),
+                              color: Theme.of(context).colorScheme.primary,
                               letterSpacing: 2,
                               fontFamily: 'Courier',
                             ),
@@ -280,11 +398,9 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066CC),
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text(
@@ -299,15 +415,21 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                 child: OutlinedButton(
                   onPressed: () async {
                     final t = widget.transaction;
-                    final msg = 'Next Meter - Receipt\n'
+                    final msg = 'NexMeter - Receipt\n'
                         'Transaction ID: ${t.id}\n'
                         'Receipt No: ${t.receipt ?? '-'}\n'
                         'Date & Time: ${TransactionService.formatDateTime(t.transactionDate)}\n'
                         'Customer: ${t.customer.name}\n'
                         'Meter ID: ${t.customer.meterId}\n'
                         'Amount: ${TransactionService.formatRupiah(t.amount)}\n'
-                        'Water Pulse: ${t.electricPulse}\n'
-                        'Token: ${t.token ?? '-'}';
+                        'Volume (m³): ${t.electricPulse}\n'
+                        // 'Plan: ${_buildPlan()}\n'
+                        // 'Key: ${_buildKey()}\n'
+                        // 'Keygen: ${_buildKeygen()}\n'
+                        // 'Encryption: ${_encryption}\n'
+                        // 'Permutation: ${_permutation}\n'
+                        // 'Encrypted Token: ${_buildEncryptedToken()}\n'
+                         'Token: ${_formatTokenBlocks(_buildEncryptedToken())}';
                     final encoded = Uri.encodeComponent(msg);
                     final whatsappUri = Uri.parse('whatsapp://send?text=$encoded');
                     if (await canLaunchUrl(whatsappUri)) {
@@ -318,11 +440,9 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                     }
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0066CC),
                     padding: const EdgeInsets.symmetric(vertical: 15),
-                    side: const BorderSide(color: Color(0xFF0066CC)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Row(

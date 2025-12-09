@@ -8,7 +8,7 @@
 PRODUCT_NAME = next_meter
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.nextMeter
+PRODUCT_BUNDLE_IDENTIFIER = com.example.next_meter
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.

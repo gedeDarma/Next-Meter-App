@@ -21,12 +21,21 @@ Future<void> main() async {
     await settingsBox.put('app', AppSettings(
       currencySymbol: 'Rp',
       serviceFee: 3000,
-      baseAmount: 10000,
-      pulsesPerBase: 30,
+      baseAmount: 2000,
+      pulsesPerBase: 1,
+      keygen: 3572184,
+      permutation: '11-12-13-0-1-2-8-9-10-3-4-5-6-7',
     ));
   }
   await DataService.seedMockCustomersIfEmpty();
   runApp(const NextMeterApp());
+}
+
+class NextMeterApp extends StatefulWidget {
+  const NextMeterApp({super.key});
+
+  @override
+  State<NextMeterApp> createState() => _NextMeterAppState();
 }
 
 class ThemeProvider extends ChangeNotifier {
@@ -59,30 +68,53 @@ class ThemeProviderInherited extends InheritedNotifier<ThemeProvider> {
   }
 }
 
-class NextMeterApp extends StatefulWidget {
-  const NextMeterApp({super.key});
-
-  @override
-  State<NextMeterApp> createState() => _NextMeterAppState();
-}
-
 class _NextMeterAppState extends State<NextMeterApp> {
   final ThemeProvider _themeProvider = ThemeProvider();
+  bool _isFirstLaunch = true;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFirstLaunch();
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    final box = await Hive.openBox('app_state');
+    final hasLaunched = box.get('has_launched', defaultValue: false);
+    setState(() {
+      _isFirstLaunch = !hasLaunched;
+      _isLoading = false;
+    });
+    if (!hasLaunched) {
+      await box.put('has_launched', true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
     return ListenableBuilder(
       listenable: _themeProvider,
       builder: (context, child) {
         return ThemeProviderInherited(
           notifier: _themeProvider,
           child: MaterialApp(
-            title: 'Next Meter - Water Token',
+            title: 'NexMeter - Water Token',
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
             themeMode:
                 _themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-            home: const IntroScreen(),
+            home: _isFirstLaunch ? const IntroScreen() : const HomeScreen(),
             routes: {
               '/home': (context) => const HomeScreen(),
               '/settings': (context) => SettingsScreen(),
@@ -94,45 +126,120 @@ class _NextMeterAppState extends State<NextMeterApp> {
   }
 
   ThemeData _buildLightTheme() {
+    // Modern deep blue color scheme
+    final cs = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF1E40AF), // Deep Blue-700
+      brightness: Brightness.light,
+    );
+    
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF0066CC),
-        brightness: Brightness.light,
-      ),
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
+      colorScheme: cs,
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
         elevation: 0,
-        backgroundColor: Color(0xFF0066CC),
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAFAFA),
+        foregroundColor: const Color(0xFF0F172A),
+        surfaceTintColor: Colors.transparent,
       ),
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: const Color(0xFFFAFAFA),
       cardTheme: CardThemeData(
-        color: Colors.grey[50],
-        elevation: 2,
+        color: Colors.white,
+        elevation: 0,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        margin: const EdgeInsets.all(0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.grey.shade100, width: 1),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1E40AF),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF1E40AF),
+          side: const BorderSide(color: Color(0xFF1E40AF), width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: const Color(0xFF1E40AF),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: const CircleBorder(),
+      ),
+      iconTheme: const IconThemeData(color: Color(0xFF1E40AF)),
+      dividerTheme: DividerThemeData(
+        color: Colors.grey.shade200,
+        thickness: 1,
       ),
     );
   }
 
   ThemeData _buildDarkTheme() {
+    final cs = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF1E40AF),
+      brightness: Brightness.dark,
+    );
+    
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF0066CC),
-        brightness: Brightness.dark,
-      ),
+      colorScheme: cs,
       appBarTheme: const AppBarTheme(
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
-        backgroundColor: Color(0xFF1a1a1a),
+        backgroundColor: Color(0xFF0F172A),
         foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
       ),
-      scaffoldBackgroundColor: const Color(0xFF121212),
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
       cardTheme: CardThemeData(
-        color: const Color(0xFF1E1E1E),
-        elevation: 2,
+        color: const Color(0xFF1E293B),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF1E40AF),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF1E40AF),
+          side: const BorderSide(color: Color(0xFF1E40AF), width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: const Color(0xFF1E40AF),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        shape: const CircleBorder(),
+      ),
+      iconTheme: const IconThemeData(color: Color(0xFF1E40AF)),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFF334155),
+        thickness: 1,
       ),
     );
   }

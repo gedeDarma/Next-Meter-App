@@ -16,23 +16,20 @@ class TransactionHistoryScreen extends StatefulWidget {
 }
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
-  late List<tx_model.Transaction> _transactions;
+
   _HistoryFilter _filter = _HistoryFilter.today;
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadTransactions();
+  String _formatLongDate(DateTime d) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  void _loadTransactions() {
-    final list = DataService.getAllTransactions();
-    setState(() {
-      _transactions = list;
-    });
-  }
+
 
   void _showTransactionDetail(tx_model.Transaction transaction) {
     showDialog(
@@ -57,8 +54,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 ),
                 const SizedBox(height: 10),
                 _buildDetailField(
-                  'Water Pulse',
-                  '${transaction.electricPulse} Water Pulse',
+                  'Volume (m³)',
+                  '${transaction.electricPulse} m³',
                 ),
                 const SizedBox(height: 10),
                 _buildDetailField(
@@ -83,18 +80,18 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.blue.shade200),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
                     ),
                     child: Text(
                       transaction.token!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Courier',
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0066CC),
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -111,12 +108,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               icon: const Icon(Icons.share),
               label: const Text('Share to WhatsApp'),
               onPressed: () async {
-                final msg = 'Next Meter - Transaction\n'
+                final msg = 'NexMeter - Transaction\n'
                     'ID: ${transaction.id}\n'
                     'Customer: ${transaction.customer.name}\n'
                     'Meter ID: ${transaction.customer.meterId}\n'
                     'Amount: ${TransactionService.formatRupiah(transaction.amount)}\n'
-                    'Water Pulse: ${transaction.electricPulse}\n'
+                    'Volume (m³): ${transaction.electricPulse}\n'
                     'Date: ${TransactionService.formatDateTime(transaction.transactionDate)}\n'
                     'Token: ${transaction.token ?? '-'}';
                 final encoded = Uri.encodeComponent(msg);
@@ -137,14 +134,8 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transaction History'),
-        leading: BackButton(onPressed: () => Navigator.of(context).pop()),
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
+    return Column(
+      children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Wrap(
@@ -194,7 +185,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     padding: const EdgeInsets.only(left: 8),
                     child: Text(
                       '${_rangeStart!.day}/${_rangeStart!.month}/${_rangeStart!.year} - ${_rangeEnd!.day}/${_rangeEnd!.month}/${_rangeEnd!.year}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF0066CC), fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
                     ),
                   ),
               ],
@@ -254,11 +245,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   padding: const EdgeInsets.all(12),
                   children: [
                     for (final d in dates) ...[
-                      Padding(
+                      Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                          ),
+                        ),
                         child: Text(
-                          '${d.day}/${d.month}/${d.year}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+                          _formatLongDate(d),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                         ),
                       ),
                       for (final transaction in groups[d]!) Card(
@@ -293,7 +289,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(20)),
-                                      child: Text('Completed', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+                                      child: Text('Detail', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
                                     ),
                                   ],
                                 ),
@@ -310,16 +306,16 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           TransactionService.formatRupiah(transaction.amount),
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+                                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
                                         ),
                                       ],
                                     ),
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
-                                        Text('Water Pulse', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                        Text('Volume (m³)', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                         const SizedBox(height: 4),
-                                        Text('${transaction.electricPulse} Water Pulse', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0066CC))),
+                                        Text('${transaction.electricPulse} m³', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                                       ],
                                     ),
                                     Column(
@@ -344,8 +340,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildDetailField(String label, String value) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/customer.dart';
 import '../models/transaction.dart' as tx_model;
 import '../services/transaction_service.dart';
+import '../services/data_service.dart';
 import 'receipt_screen.dart';
 
 class TransactionSummaryScreen extends StatefulWidget {
@@ -10,6 +11,7 @@ class TransactionSummaryScreen extends StatefulWidget {
   final int waterPulse;
   final double serviceFee;
   final double totalPayment;
+  final int counter;
 
   const TransactionSummaryScreen({
     super.key,
@@ -18,6 +20,7 @@ class TransactionSummaryScreen extends StatefulWidget {
     required this.waterPulse,
     required this.serviceFee,
     required this.totalPayment,
+    required this.counter,
   });
 
   @override
@@ -35,6 +38,8 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
 
     // Simulate confirmation process
     Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      final cnt = DataService.getTransactionCountByMeterId(widget.customer.meterId) + 1;
       final transaction = tx_model.Transaction(
         id: TransactionService.generateTransactionId(),
         customer: widget.customer,
@@ -48,7 +53,7 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => ReceiptScreen(transaction: transaction),
+          builder: (context) => ReceiptScreen(transaction: transaction, counter: cnt),
         ),
       );
     });
@@ -67,12 +72,12 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Confirm Transaction',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0066CC),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -148,8 +153,8 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
                       ),
                       const SizedBox(height: 12),
                       _buildSummaryRow(
-                        'Water Pulse',
-                        '${widget.waterPulse} Pulse',
+                        'Volume (m³)',
+                        '${widget.waterPulse} m³',
                       ),
                       const SizedBox(height: 12),
                       _buildSummaryRow(
@@ -164,15 +169,15 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade200),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: Colors.amber.shade700,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -180,7 +185,7 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
                         'Once confirmed, the transaction cannot be reversed. Please verify all details.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.amber.shade700,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -193,11 +198,9 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
                 child: ElevatedButton(
                   onPressed: _isConfirming ? null : _confirmTransaction,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00AA66),
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: _isConfirming
@@ -225,11 +228,9 @@ class _TransactionSummaryScreenState extends State<TransactionSummaryScreen> {
                 child: OutlinedButton(
                   onPressed: _isConfirming ? null : () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0066CC),
                     padding: const EdgeInsets.symmetric(vertical: 15),
-                    side: const BorderSide(color: Color(0xFF0066CC)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: const Text(

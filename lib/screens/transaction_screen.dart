@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/customer.dart';
 import '../services/data_service.dart';
@@ -25,11 +26,19 @@ class _TransactionScreenState extends State<TransactionScreen> {
       return;
     }
 
+    if (!RegExp(r'^\d{8}$').hasMatch(meterId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Meter ID must be 8 digits (numbers only)')),
+      );
+      return;
+    }
+
     setState(() {
       _isSearching = true;
     });
 
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
       final customer = DataService.searchCustomerByMeterId(meterId);
       setState(() {
         _isSearching = false;
@@ -49,10 +58,17 @@ class _TransactionScreenState extends State<TransactionScreen> {
       MaterialPageRoute(
         builder: (context) => QRScannerTransactionScreen(
           onQRScanned: (meterId) {
-            _meterIdController.text = meterId;
-            Future.delayed(const Duration(milliseconds: 300), () {
-              _searchCustomer();
-            });
+            final normalized = meterId.replaceAll(RegExp(r'\D'), '');
+            if (RegExp(r'^\d{8}$').hasMatch(normalized)) {
+              _meterIdController.text = normalized;
+              Future.delayed(const Duration(milliseconds: 300), () {
+                _searchCustomer();
+              });
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Scanned Meter ID must be exactly 8 digits')),
+              );
+            }
           },
         ),
       ),
@@ -87,12 +103,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Customer Search',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0066CC),
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -115,7 +131,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
               TextField(
                 controller: _meterIdController,
                 decoration: InputDecoration(
-                  hintText: 'Enter meter ID (e.g., 1234567890)',
+                  hintText: 'Enter meter ID (e.g., 12345678)',
                   prefixIcon: const Icon(Icons.badge),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.qr_code_scanner),
@@ -130,13 +146,17 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF0066CC),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
                       width: 2,
                     ),
                   ),
                 ),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(8),
+                ],
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -144,11 +164,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 child: ElevatedButton(
                   onPressed: _isSearching ? null : _searchCustomer,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066CC),
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   child: _isSearching
@@ -172,12 +190,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
               ),
               const SizedBox(height: 30),
               if (_selectedCustomer != null) ...[
-                const Text(
+                Text(
                   'Customer Information',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0066CC),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 15),
@@ -234,11 +252,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   child: ElevatedButton(
                     onPressed: _proceedToTransaction,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00AA66),
-                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: const Text(
