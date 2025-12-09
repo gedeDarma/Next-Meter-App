@@ -1,4 +1,5 @@
 # Next Meter - Water Token Transaction App
+Last updated: 2025-12-10
 
 A modern Flutter mobile application for managing water token transactions with an intuitive UI and smooth user flow.
 

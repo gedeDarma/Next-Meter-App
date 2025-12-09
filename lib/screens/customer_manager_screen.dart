@@ -413,7 +413,7 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
                             await DataService.updateCustomer(customer);
                           }
                           if (!mounted) return;
-                          Navigator.of(ctx).pop();
+                          Navigator.of(context).pop();
                         } catch (e) {
                           if (!mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to save customer')));
@@ -452,8 +452,8 @@ class _CustomerManagerScreenState extends State<CustomerManagerScreen> {
             TextButton(
               onPressed: () async {
                 await DataService.deleteCustomer(customer.id);
-                Navigator.of(dCtx).pop();
                 if (!mounted) return;
+                Navigator.of(context).pop();
                 Navigator.of(context).pop();
               },
               child: const Text('Delete'),

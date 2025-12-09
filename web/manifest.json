@@ -1,6 +1,6 @@
 {
-    "name": "next_meter",
-    "short_name": "next_meter",
+    "name": "NexMeter",
+    "short_name": "NexMeter",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",

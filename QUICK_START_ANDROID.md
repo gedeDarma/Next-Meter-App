@@ -1,4 +1,5 @@
 # Quick Start Guide - Running on Android Device
+Last updated: 2025-12-10
 
 ## 🚀 Step-by-Step Instructions
 

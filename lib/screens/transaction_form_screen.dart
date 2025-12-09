@@ -207,7 +207,6 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
                     ValueListenableBuilder<Box<AppSettings>>(
                       valueListenable: Hive.box<AppSettings>('settings').listenable(),
                       builder: (context, settingsBox, _) {
-                        final serviceFee = TransactionService.serviceFee.toDouble();
                         final waterPulse = TransactionService.calculateElectricPulse(_selectedAmount.toDouble());
                         return Container(
                           padding: const EdgeInsets.all(15),

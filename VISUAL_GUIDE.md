@@ -1,4 +1,5 @@
 # 📱 Visual App Flow & Screen Guide
+Last updated: 2025-12-10
 
 ## App Navigation Flow
 

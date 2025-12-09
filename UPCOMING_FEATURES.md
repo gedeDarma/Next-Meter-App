@@ -1,3 +1,5 @@
+Last updated: 2025-12-10
+
 High-Impact Product
 
 - Configurable pricing and pulse formula: add a Settings page to set service fee, formula, and currency; all calculations use these values.

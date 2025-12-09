@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../main.dart';
 import 'transaction_screen.dart';
 import 'transaction_history_screen.dart';
@@ -28,6 +29,12 @@ class _HomeScreenState extends State<HomeScreen> {
       const TransactionHistoryScreen(),
       const CustomerManagerScreen(),
     ];
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheImage(const AssetImage('assets/logo.png'), context);
   }
 
   void _onItemTapped(int index) {
@@ -62,16 +69,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
-        debugPrint('DEBUG: PopScope triggered, didPop: $didPop, current index: $_selectedIndex');
-        if (didPop) {
-          return;
-        }
+        if (didPop) return;
         if (_selectedIndex != 0) {
           setState(() {
             _selectedIndex = 0;
           });
-          debugPrint('DEBUG: Switched to home tab');
+          return;
         }
+        SystemNavigator.pop();
       },
       child: Scaffold(
         appBar: AppBar(
@@ -79,7 +84,15 @@ class _HomeScreenState extends State<HomeScreen> {
           automaticallyImplyLeading: false,
           title: Row(
             children: [
-              Image.asset('assets/icon.png', width: 28, height: 28),
+              Image.asset(
+                'assets/logo.png',
+                width: 28,
+                height: 28,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.water_drop,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

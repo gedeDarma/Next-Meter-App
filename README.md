@@ -1,4 +1,5 @@
 # Next Meter
+Last updated: 2025-12-10
 
 Water token management app built with Flutter. Features local persistence, customer management, transaction history with filters, and WhatsApp sharing.
 

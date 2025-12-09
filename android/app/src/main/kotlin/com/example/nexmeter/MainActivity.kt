@@ -1,4 +1,4 @@
-package com.example.next_meter
+package com.example.nexmeter
 
 import io.flutter.embedding.android.FlutterActivity
 
